@@ -1,0 +1,112 @@
+{% extends "base_admin.html" %}
+{% set active = 'statistics' %}
+{% block title %}Statistics{% endblock %}
+{% block page_title %}Statistics{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-4" style="margin-bottom:18px;">
+  <div class="stat-card accent-blue"><div class="stat-label">Total computers</div><div class="stat-value">{{ stats.total }}</div></div>
+  <div class="stat-card accent-blue"><div class="stat-label">System health</div><div class="stat-value">{{ stats.health }}%</div></div>
+  <div class="stat-card accent-orange"><div class="stat-label">Open reports</div><div class="stat-value">{{ stats.open_reports }}</div></div>
+  <div class="stat-card accent-green"><div class="stat-label">Resolved reports</div><div class="stat-value">{{ stats.resolved_reports }}</div></div>
+</div>
+
+<div class="grid grid-2" style="margin-bottom:18px;">
+  <div class="panel chart-card">
+    <h3>Computer status distribution</h3>
+    <canvas id="statusChart" height="220" role="img" aria-label="Computer status distribution chart"></canvas>
+  </div>
+
+  <div class="panel chart-card">
+    <h3>Most common reported problems</h3>
+    {% if issue_counts %}
+      <canvas id="issueChart" height="220" role="img" aria-label="Reported problems chart"></canvas>
+    {% else %}
+      <p style="color:var(--text-muted); font-size:13px;">No reports have been filed yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel chart-card">
+  <h3>Open vs Resolved reports</h3>
+  <canvas id="reportsChart" height="140" role="img" aria-label="Open versus resolved reports chart"></canvas>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
+<script>
+(function () {
+  var statusColors = { Working: "#16A34A", "Under Repair": "#F59E0B", Offline: "#DC2626" };
+
+  new Chart(document.getElementById("statusChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["Working", "Under Repair", "Offline"],
+      datasets: [{
+        data: [{{ stats.working }}, {{ stats.under_repair }}, {{ stats.offline }}],
+        backgroundColor: [statusColors.Working, statusColors["Under Repair"], statusColors.Offline],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var total = ctx.dataset.data.reduce(function (a, b) { return a + b; }, 0) || 1;
+              var pct = Math.round((ctx.parsed / total) * 100);
+              return ctx.label + ": " + ctx.parsed + " (" + pct + "%)";
+            }
+          }
+        }
+      },
+      cutout: "68%",
+      animation: { duration: 500 },
+    }
+  });
+
+  var issueCanvas = document.getElementById("issueChart");
+  if (issueCanvas) {
+    new Chart(issueCanvas, {
+      type: "bar",
+      data: {
+        labels: {{ issue_counts | map(attribute='issue_type') | list | tojson }},
+        datasets: [{
+          data: {{ issue_counts | map(attribute='total') | list | tojson }},
+          backgroundColor: "#1D8A3E",
+          borderRadius: 6,
+          maxBarThickness: 28,
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+        animation: { duration: 500 },
+      }
+    });
+  }
+
+  new Chart(document.getElementById("reportsChart"), {
+    type: "bar",
+    data: {
+      labels: ["Reports"],
+      datasets: [
+        { label: "Open", data: [{{ stats.open_reports }}], backgroundColor: "#F59E0B", borderRadius: 6, maxBarThickness: 40 },
+        { label: "Resolved", data: [{{ stats.resolved_reports }}], backgroundColor: "#16A34A", borderRadius: 6, maxBarThickness: 40 },
+      ]
+    },
+    options: {
+      indexAxis: "y",
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 12 } } } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: false } },
+      animation: { duration: 500 },
+    }
+  });
+})();
+</script>
+{% endblock %}

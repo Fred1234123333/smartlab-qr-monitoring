@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+venv/
+instance/
+*.db
+*.sqlite3
+SmartLab_Flask_SourceCode_v12.zip

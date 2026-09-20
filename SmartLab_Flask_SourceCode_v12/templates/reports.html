@@ -1,0 +1,93 @@
+{% extends "base_admin.html" %}
+{% from "_icons.html" import icon %}
+{% from "_badges.html" import report_badge, priority_badge %}
+{% set active = 'reports' %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+
+<div class="tabs" style="display:flex; align-items:center; justify-content:space-between;">
+  <div>
+    <a class="tab {% if tab == 'open' %}active{% endif %}" href="{{ url_for('reports_list', tab='open') }}">Open reports</a>
+    <a class="tab {% if tab == 'resolved' %}active{% endif %}" href="{{ url_for('reports_list', tab='resolved') }}">Resolved reports</a>
+  </div>
+  <a href="{{ url_for('print_reports', status=tab) }}" target="_blank" class="btn btn-outline btn-sm">{{ icon('printer') }} Print report log</a>
+</div>
+
+{% if reports %}
+<div class="panel" style="padding:0;">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Computer</th><th>Laboratory</th><th>Issue</th><th>Priority</th><th>Reported by</th><th>Date</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for r in reports %}
+        <tr>
+          <td data-label="Computer"><a href="{{ url_for('computer_detail', computer_id=r['computer_id']) }}" style="font-weight:600; color:var(--accent);">{{ r['computer_id'] }}</a></td>
+          <td data-label="Laboratory">{{ r['lab'] }} · WS{{ r['number'] }}</td>
+          <td data-label="Issue">{{ r['issue_type'] }}{% if r['description'] %}<div style="color:var(--text-muted); font-size:12px; margin-top:3px; max-width:260px;">{{ r['description'] }}</div>{% endif %}</td>
+          <td data-label="Priority">{{ priority_badge(r['priority']) }}</td>
+          <td data-label="Reported by">{{ r['reporter'] }}</td>
+          <td data-label="Date">{{ r['date_reported'] }}</td>
+          <td data-label="Status">{{ report_badge(r['status']) }}</td>
+          <td data-label="">
+            {% if r['status'] != 'Resolved' %}
+            <button type="button" class="btn btn-primary btn-sm resolve-btn" data-report-id="{{ r['id'] }}">{{ icon('check') }} Resolve</button>
+            {% else %}
+            <span style="color:var(--text-muted); font-size:12px;">Resolved {{ r['date_resolved'] }}</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  <a href="{{ url_for('reports_list', tab=tab, page=page-1) }}" class="btn btn-outline btn-sm {{ 'btn-disabled-link' if page <= 1 }}">{{ icon('chevron-left') }} Previous</a>
+  <span class="pagination-info">Page {{ page }} of {{ total_pages }} &middot; {{ total }} report{{ 's' if total != 1 }}</span>
+  <a href="{{ url_for('reports_list', tab=tab, page=page+1) }}" class="btn btn-outline btn-sm {{ 'btn-disabled-link' if page >= total_pages }}">Next {{ icon('chevron-right') }}</a>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  {{ icon('check-circle') }}
+  <h3>{% if tab == 'open' %}All clear{% else %}No resolved reports yet{% endif %}</h3>
+  <p>{% if tab == 'open' %}There are currently no open problem reports.{% else %}Resolved reports will show up here.{% endif %}</p>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll(".resolve-btn").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var reportId = btn.getAttribute("data-report-id");
+    btn.disabled = true;
+    fetch("/api/reports/" + reportId + "/resolve", {
+      method: "POST",
+      headers: { "X-CSRFToken": window.smartlabCsrfToken ? window.smartlabCsrfToken() : "" },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data.success) { smartlabToast(data.error || "Unable to resolve report.", "error"); btn.disabled = false; return; }
+        var row = btn.closest("tr");
+        row.style.transition = "opacity 0.3s ease";
+        row.style.opacity = "0";
+        setTimeout(function () {
+          row.remove();
+          if (!document.querySelector(".data-table tbody tr")) { location.reload(); }
+        }, 300);
+        smartlabToast("Report resolved.", "success");
+      })
+      .catch(function () { smartlabToast("Network error resolving report.", "error"); btn.disabled = false; });
+  });
+});
+</script>
+{% endblock %}

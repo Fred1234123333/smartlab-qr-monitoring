@@ -1,0 +1,29 @@
+{% extends "base_admin.html" %}
+{% set active = 'computers' %}
+{% block title %}Add Computer{% endblock %}
+{% block page_title %}Add computer{% endblock %}
+
+{% block content %}
+<div class="form-card">
+  <form method="post" data-smartlab-validate>
+    <div class="form-group">
+      <label for="computer_id">Computer ID<span class="required-mark">*</span></label>
+      <input class="form-control" type="text" id="computer_id" name="computer_id" placeholder="e.g. LABA-PC01" required>
+      <div class="hint">A unique identifier — this is what gets encoded in the QR code.</div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="lab">Laboratory<span class="required-mark">*</span></label>
+        <input class="form-control" type="text" id="lab" name="lab" placeholder="e.g. Laboratory A" required>
+      </div>
+      <div class="form-group">
+        <label for="number">Workstation number<span class="required-mark">*</span></label>
+        <input class="form-control" type="number" id="number" name="number" placeholder="e.g. 12" required>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block" data-done-btn data-busy-text="Saving…">Generate QR & save computer</button>
+  </form>
+</div>
+{% endblock %}

@@ -3,3 +3,5 @@ Flask-WTF
 Flask-Limiter
 qrcode[pil]
 Werkzeug
+gunicorn
+gunicorn

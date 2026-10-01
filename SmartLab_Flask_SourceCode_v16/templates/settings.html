@@ -151,8 +151,44 @@
             </div>
             {% if lab.description %}<div class="lab-meta">{{ lab.description }}</div>{% endif %}
           </div>
-          <form method="post" action="{{ url_for('settings_delete_laboratory', lab_id=lab.id) }}" onsubmit="return confirm('Remove this laboratory? Computers already registered under it keep their records but lose this location link.');">
-            <button type="submit" class="btn btn-outline btn-sm">Remove</button>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('edit-lab-{{ lab.id }}').classList.toggle('open')">Edit</button>
+            <form method="post" action="{{ url_for('settings_delete_laboratory', lab_id=lab.id) }}" onsubmit="return confirm('Remove this laboratory? Computers already registered under it keep their records but lose this location link.');">
+              <button type="submit" class="btn btn-outline btn-sm">Remove</button>
+            </form>
+          </div>
+        </div>
+        <div id="edit-lab-{{ lab.id }}" class="lab-edit-form">
+          <form method="post" action="{{ url_for('settings_edit_laboratory', lab_id=lab.id) }}" data-smartlab-validate>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Laboratory Name *</label>
+                <input class="form-control" type="text" name="lab_name" value="{{ lab.name }}" required>
+              </div>
+              <div class="form-group">
+                <label>Code</label>
+                <input class="form-control" type="text" name="lab_code" value="{{ lab.code or '' }}">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Building</label>
+                <input class="form-control" type="text" name="lab_building" value="{{ lab.building or '' }}">
+              </div>
+              <div class="form-group">
+                <label>Floor</label>
+                <input class="form-control" type="text" name="lab_floor" value="{{ lab.floor or '' }}">
+              </div>
+              <div class="form-group">
+                <label>Room</label>
+                <input class="form-control" type="text" name="lab_room" value="{{ lab.room or '' }}">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <input class="form-control" type="text" name="lab_description" value="{{ lab.description or '' }}">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" data-busy-text="Saving…">Save changes</button>
           </form>
         </div>
         {% endfor %}

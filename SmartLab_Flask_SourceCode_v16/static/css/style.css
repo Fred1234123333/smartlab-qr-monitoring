@@ -81,7 +81,7 @@ html[data-theme="light"] .health-ring-center .health-pct { color: var(--text); }
 
 /* Glassmorphism: frosted-glass blur on every translucent surface that uses var(--white) */
 .panel, .topbar, .btn-outline, .btn-danger, .pill, .search-box, .form-control,
-.bell-dropdown, .auth-card, .status-card, .modal-box, .qr-modal-box,
+.bell-dropdown, .status-card, .modal-box, .qr-modal-box,
 .card, .stat-card, .dropdown-menu, table.data-table {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -559,19 +559,74 @@ table.data-table tr:last-child td { border-bottom: none; }
 
 .public-footer { text-align: center; padding: 24px; font-size: 12px; color: var(--text-muted); }
 
-.auth-wrap {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
-  background:
-    linear-gradient(180deg, rgba(11,46,23,0.90), rgba(11,46,23,0.94)),
-    url("../img/login_hero.jpg");
-  background-size: cover;
-  background-position: center;
+/* ===== Login page — split-screen layout: a tilted lab-photo card
+   overlapping a clean sign-in card, in SmartLab's own palette. ===== */
+.login-wrap {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px 24px;
+  background: var(--green-500);
 }
-.auth-card { background: var(--white); border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 380px; box-shadow: var(--shadow-lg); }
-.auth-brand { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 6px; }
-.auth-brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
-.auth-brand span { font-weight: 800; font-size: 19px; }
-.auth-sub { text-align: center; color: var(--text-muted); font-size: 13px; margin-bottom: 28px; }
+.login-stage {
+  width: 100%; max-width: 920px;
+  display: flex; align-items: stretch;
+}
+.login-photo {
+  position: relative;
+  width: 380px; flex-shrink: 0;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  transform: rotate(-3deg);
+  z-index: 1;
+  margin-right: -64px;
+}
+.login-photo img { width: 100%; height: 100%; min-height: 480px; object-fit: cover; display: block; }
+.login-photo-scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(7,27,16,0.55) 0%, rgba(7,27,16,0.08) 32%, rgba(7,27,16,0.18) 60%, rgba(7,27,16,0.82) 100%);
+}
+.login-photo-top { position: absolute; top: 22px; left: 22px; right: 22px; }
+.login-live-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(10,31,20,0.55); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.16); color: #fff;
+  font-size: 12px; font-weight: 600; padding: 7px 13px; border-radius: 999px;
+}
+.login-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green-300); box-shadow: 0 0 8px var(--green-300); }
+.login-photo-bottom { position: absolute; left: 22px; right: 22px; bottom: 22px; display: flex; align-items: center; gap: 12px; }
+.login-photo-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+}
+.login-photo-avatar svg { width: 18px; height: 18px; color: #fff; }
+.login-photo-name { color: #fff; font-weight: 700; font-size: 14px; }
+.login-photo-role { color: rgba(255,255,255,0.72); font-size: 12px; margin-top: 1px; }
+
+.login-card {
+  position: relative; z-index: 2;
+  background: var(--white);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: 22px;
+  padding: 44px 40px;
+  width: 100%; max-width: 400px;
+  box-shadow: var(--shadow-lg);
+  flex-shrink: 0;
+}
+.login-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+.login-heading { font-size: 27px; font-weight: 800; margin: 0 0 4px; letter-spacing: -0.01em; }
+
+.auth-brand { display: flex; align-items: center; gap: 10px; }
+.auth-sub { color: var(--text-muted); font-size: 13px; }
+.login-sub { margin-bottom: 26px; }
+.login-qr-note { text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
+
+@media (max-width: 860px) {
+  .login-photo { display: none; }
+  .login-card { max-width: 420px; margin: 0 auto; }
+}
 
 .status-page { max-width: 480px; margin: 0 auto; padding: 32px 20px 60px; width: 100%; }
 .status-card { background: var(--white); border-radius: 18px; padding: 28px 24px; text-align: center; box-shadow: var(--shadow-md); border: 1px solid var(--border); }
@@ -708,6 +763,8 @@ table.data-table tr:last-child td { border-bottom: none; }
 .lab-item:last-child { border-bottom: none; }
 .lab-item .lab-name { font-weight: 700; font-size: 14px; }
 .lab-item .lab-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+.lab-edit-form { display: none; padding: 14px 0 18px; border-bottom: 1px solid var(--border); }
+.lab-edit-form.open { display: block; }
 
 /* Danger zone */
 .danger-card {

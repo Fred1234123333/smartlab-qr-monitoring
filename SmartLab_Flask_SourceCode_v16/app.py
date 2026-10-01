@@ -345,6 +345,7 @@ def computer_detail(computer_id):
         priority_options=db.PRIORITY_OPTIONS,
         report_status_options=db.REPORT_STATUS_OPTIONS,
         maintenance_result_options=db.MAINTENANCE_RESULT_OPTIONS,
+        laboratories=db.get_laboratories(),
     )
 
 
@@ -372,6 +373,44 @@ def update_specs(computer_id):
     db.log_activity(f"{computer_id} specifications updated", category="status_manual", computer_id=computer_id)
     flash("Specifications saved.", "success")
     return redirect(url_for("computer_detail", computer_id=computer_id))
+
+
+@app.route("/admin/computers/<computer_id>/edit", methods=["POST"])
+@login_required
+def edit_computer(computer_id):
+    computer = db.get_computer(computer_id)
+    if not computer:
+        abort(404)
+    new_id = request.form.get("computer_id", "").strip().upper()
+    laboratory_id = request.form.get("laboratory_id", "").strip()
+    number = request.form.get("number", "").strip()
+
+    if not new_id or not laboratory_id or not number.isdigit():
+        flash("Computer ID, laboratory, and workstation number are all required.", "error")
+        return redirect(url_for("computer_detail", computer_id=computer_id))
+
+    if new_id != computer_id and db.computer_exists(new_id):
+        flash(f"Computer ID '{new_id}' is already in use by another computer.", "error")
+        return redirect(url_for("computer_detail", computer_id=computer_id))
+
+    new_qr_path = None
+    old_qr_full_path = None
+    if new_id != computer_id:
+        # The ID is encoded in the QR image itself, so a renamed computer
+        # needs a freshly generated code under its new name.
+        new_qr_path = qr_utils.generate_qr(new_id, request.host_url)
+        if computer["qr_path"]:
+            old_qr_full_path = os.path.join(app.root_path, "static", computer["qr_path"])
+
+    db.update_computer(computer_id, new_id, int(laboratory_id), int(number), new_qr_path=new_qr_path)
+
+    if old_qr_full_path and os.path.exists(old_qr_full_path):
+        os.remove(old_qr_full_path)
+
+    db.log_activity(f"{computer_id} edited" + (f" (renamed to {new_id})" if new_id != computer_id else ""),
+                     category="status_manual", computer_id=new_id)
+    flash("Computer updated.", "success")
+    return redirect(url_for("computer_detail", computer_id=new_id))
 
 
 @app.route("/admin/computers/<computer_id>/maintenance", methods=["POST"])
@@ -743,6 +782,31 @@ def settings_add_laboratory():
                                code=code or None, building=building or None, floor=floor or None,
                                room=room or None)
             flash(f"Laboratory '{name}' added.", "success")
+        except Exception:
+            flash(f"A laboratory named '{name}' already exists.", "error")
+    return _settings_redirect("laboratory")
+
+
+@app.route("/admin/settings/laboratory/<int:lab_id>/edit", methods=["POST"])
+@login_required
+def settings_edit_laboratory(lab_id):
+    if not db.get_laboratory(lab_id):
+        abort(404)
+    name = request.form.get("lab_name", "").strip()
+    code = request.form.get("lab_code", "").strip()
+    building = request.form.get("lab_building", "").strip()
+    floor = request.form.get("lab_floor", "").strip()
+    room = request.form.get("lab_room", "").strip()
+    location = request.form.get("lab_location", "").strip()
+    description = request.form.get("lab_description", "").strip()
+    if not name:
+        flash("Laboratory name is required.", "error")
+    else:
+        try:
+            db.update_laboratory(lab_id, name, location=location or None, description=description or None,
+                                  code=code or None, building=building or None, floor=floor or None,
+                                  room=room or None)
+            flash(f"Laboratory '{name}' updated.", "success")
         except Exception:
             flash(f"A laboratory named '{name}' already exists.", "error")
     return _settings_redirect("laboratory")

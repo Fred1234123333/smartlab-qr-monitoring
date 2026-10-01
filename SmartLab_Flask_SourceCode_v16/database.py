@@ -359,6 +359,45 @@ def get_all_computers_with_lab():
     return rows
 
 
+def update_computer(old_computer_id, new_computer_id, laboratory_id, number, new_qr_path=None):
+    """Edits a computer's ID, laboratory, and workstation number. If the ID
+    actually changes, every report, status-history entry, and maintenance
+    record tied to the old ID is moved to the new one too - otherwise a typo
+    fix would silently orphan that computer's whole history. Pass new_qr_path
+    only when the ID changed and a fresh QR image was generated for it.
+
+    reports/computer_status_history/maintenance all declare a real FOREIGN KEY
+    on computer_id, so renaming it has no valid statement order that satisfies
+    the constraint at every intermediate step - foreign_keys is turned off for
+    just this one connection/transaction, exactly like a real foreign key
+    rename is normally handled, then re-enabled before the connection closes.
+    """
+    conn = get_connection()
+    id_changed = new_computer_id != old_computer_id
+    if id_changed:
+        conn.execute("PRAGMA foreign_keys = OFF")
+    lab_row = conn.execute("SELECT name FROM laboratories WHERE id=?", (laboratory_id,)).fetchone()
+    lab_name = lab_row["name"] if lab_row else None
+    if new_qr_path:
+        conn.execute(
+            "UPDATE computers SET computer_id=?, lab=?, laboratory_id=?, number=?, qr_path=? WHERE computer_id=?",
+            (new_computer_id, lab_name, laboratory_id, number, new_qr_path, old_computer_id),
+        )
+    else:
+        conn.execute(
+            "UPDATE computers SET computer_id=?, lab=?, laboratory_id=?, number=? WHERE computer_id=?",
+            (new_computer_id, lab_name, laboratory_id, number, old_computer_id),
+        )
+    if id_changed:
+        conn.execute("UPDATE reports SET computer_id=? WHERE computer_id=?", (new_computer_id, old_computer_id))
+        conn.execute("UPDATE computer_status_history SET computer_id=? WHERE computer_id=?", (new_computer_id, old_computer_id))
+        conn.execute("UPDATE maintenance SET computer_id=? WHERE computer_id=?", (new_computer_id, old_computer_id))
+    conn.commit()
+    if id_changed:
+        conn.execute("PRAGMA foreign_keys = ON")
+    conn.close()
+
+
 def get_computer(computer_id):
     conn = get_connection()
     row = conn.execute("SELECT * FROM computers WHERE computer_id=?", (computer_id,)).fetchone()
@@ -805,6 +844,22 @@ def add_laboratory(name, location=None, description=None, code=None, building=No
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (name, location, description, code, building, floor, room, status or "Active",
          datetime.now().strftime("%Y-%m-%d %H:%M")),
+    )
+    conn.commit()
+    conn.close()
+
+
+def update_laboratory(lab_id, name, location=None, description=None, code=None,
+                       building=None, floor=None, room=None, status="Active"):
+    # Same auto-compose rule as add_laboratory, so editing stays consistent
+    # with how the record was first created.
+    if not location and (building or floor or room):
+        location = " - ".join(p for p in [building, floor, room] if p)
+    conn = get_connection()
+    conn.execute(
+        "UPDATE laboratories SET name=?, location=?, description=?, code=?, "
+        "building=?, floor=?, room=?, status=? WHERE id=?",
+        (name, location, description, code, building, floor, room, status or "Active", lab_id),
     )
     conn.commit()
     conn.close()
